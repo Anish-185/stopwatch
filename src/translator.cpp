@@ -18,6 +18,14 @@ Translator::Translator(const QString &languageFile, const QString &catalogDirect
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, [this] { m_debounce.start(); });
     connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, [this] { m_debounce.start(); });
     connect(&m_debounce, &QTimer::timeout, this, &Translator::reload);
+#if defined(Q_OS_WIN)
+    // Omarchy's language file doesn't exist on Windows, so there's nothing to
+    // watch; English it is.
+    if (languageFile.isEmpty()) {
+        m_language = "en";
+        return;
+    }
+#endif
     reload();
 }
 

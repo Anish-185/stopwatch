@@ -16,3 +16,6 @@ SOURCES += \
     src/translator.cpp
 
 RESOURCES += src/resources.qrc
+
+# The .exe's own icon in Explorer and the taskbar.
+win32: RC_ICONS = pkgbuild/stopwatch.ico

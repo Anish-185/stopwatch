@@ -9,23 +9,48 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QStandardPaths>
+
+#if defined(Q_OS_LINUX)
 #include <time.h>
+#elif defined(Q_OS_WIN)
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <chrono>
+#endif
 
 namespace {
 
+// A clock that never jumps when the wall clock is changed and keeps counting
+// while the machine sleeps, so time asleep counts as time passed.
 qint64 bootClock() {
+#if defined(Q_OS_LINUX)
     // CLOCK_BOOTTIME is monotonic and, unlike CLOCK_MONOTONIC, includes time
     // spent suspended.
     timespec ts{};
     clock_gettime(CLOCK_BOOTTIME, &ts);
     return qint64(ts.tv_sec) * 1000 + ts.tv_nsec / 1000000;
+#elif defined(Q_OS_WIN)
+    // GetTickCount64 is milliseconds since boot, sleep and hibernation
+    // included, and costs nothing to read.
+    return qint64(GetTickCount64());
+#else
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch()).count();
+#endif
 }
 
 qint64 wallClock() { return QDateTime::currentMSecsSinceEpoch(); }
 
 QString defaultStateFile() {
+#if defined(Q_OS_LINUX)
     const QString state = qEnvironmentVariable("XDG_STATE_HOME", QDir::homePath() + "/.local/state");
     return state + "/stopwatch/state.json";
+#else
+    // %LOCALAPPDATA%\stopwatch on Windows.
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/stopwatch/state.json";
+#endif
 }
 
 } // namespace
@@ -36,7 +61,14 @@ Stopwatch::Stopwatch(const QString &stateFile, Clock monotonic, Clock wall, QObj
       m_monotonic(monotonic ? monotonic : Clock(bootClock)),
       m_wall(wall ? wall : Clock(wallClock)) {
     m_timer.setSingleShot(true);
+#if defined(Q_OS_WIN)
+    // On Windows a precise timer can raise the system-wide timer resolution,
+    // which keeps the CPU from idling. A coarse one (within 5%) is plenty for
+    // a once-a-second wake: tick() reschedules if it fires a little early.
+    m_timer.setTimerType(Qt::CoarseTimer);
+#else
     m_timer.setTimerType(Qt::PreciseTimer);
+#endif
     connect(&m_timer, &QTimer::timeout, this, &Stopwatch::tick);
     load();
     m_shown = seconds();

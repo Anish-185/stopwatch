@@ -47,6 +47,12 @@ Theme::Theme(const QString &directory, QObject *parent, const QString &hyprctl)
     connect(&m_roundingPoll, &QTimer::timeout, this, &Theme::refreshRounding);
     if (!m_hyprctl.isEmpty())
         m_roundingPoll.start();
+#if defined(Q_OS_WIN)
+    // There's no Omarchy theme to follow on Windows: keep the default accent
+    // and skip the file watching altogether.
+    if (directory.isEmpty())
+        return;
+#endif
     reload();
 }
 

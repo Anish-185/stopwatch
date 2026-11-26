@@ -19,7 +19,8 @@ int main(int argc, char *argv[]) {
     // Matches the window to stopwatch.desktop, so the compositor (Wayland
     // app_id) and the launcher pick up the installed icon.
     app.setDesktopFileName("stopwatch");
-    app.setWindowIcon(QIcon::fromTheme("stopwatch"));
+    // The installed icon on Linux; the one compiled in everywhere else.
+    app.setWindowIcon(QIcon::fromTheme("stopwatch", QIcon(":/stopwatch.png")));
 
     QQuickStyle::setStyle("Material");
 
