@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Stopwatch
+Comment=A count-up stopwatch you can start from any time
+Exec=stopwatch
+Icon=stopwatch
+Terminal=false
+Categories=Utility;
+StartupWMClass=stopwatch
