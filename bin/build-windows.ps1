@@ -35,9 +35,19 @@ if ($Test) {
     try {
         Run qmake @((Join-Path $root "tests\stopwatch_tests.pro"), "CONFIG-=debug_and_release", "CONFIG+=release")
         Run nmake @("/nologo")
+        # The results go to a file and are printed from there, so a run that
+        # prints nothing can't pass unnoticed.
         $env:QT_QPA_PLATFORM = "offscreen"
-        Run (Join-Path $tests "stopwatch_tests.exe") @()
+        $results = Join-Path $tests "results.txt"
+        if (Test-Path $results) { Remove-Item $results }
+        & (Join-Path $tests "stopwatch_tests.exe") -o "$results,txt"
+        $code = $LASTEXITCODE
         Remove-Item Env:\QT_QPA_PLATFORM
+        if (-not (Test-Path $results)) { throw "The tests didn't run (exit code $code)" }
+        Get-Content $results | Write-Host
+        if ($code -ne 0 -or -not (Select-String -Path $results -Pattern "Totals: \d+ passed, 0 failed" -Quiet)) {
+            throw "Tests failed (exit code $code)"
+        }
     } finally { Pop-Location }
 }
 
